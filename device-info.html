@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Info Collection</title>
+    <!-- إضافة رابط مكتبة UAParser.js من CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/ua-parser-js@0.7.28/dist/ua-parser.min.js"></script>
+    <script>
+        // دالة لجمع معلومات الجهاز
+        function sendDeviceInfo() {
+            // التأكد من أن UAParser تم تحميله بنجاح
+            if (typeof UAParser === "undefined") {
+                alert("مكتبة UAParser لم تُحمّل بنجاح. الرجاء التأكد من الاتصال بالإنترنت.");
+                return;
+            }
+
+            var parser = new UAParser();
+            var deviceInfo = {
+                userAgent: navigator.userAgent,      // معلومات المتصفح والجهاز
+                platform: navigator.platform,        // نظام التشغيل
+                language: navigator.language,        // اللغة
+                screenWidth: screen.width,           // عرض الشاشة
+                screenHeight: screen.height          // ارتفاع الشاشة
+            };
+
+            // استخدام UAParser.js للحصول على نوع الجهاز
+            var result = parser.getResult();
+            deviceInfo.deviceType = result.device.type || "Unknown Device"; // تحديد نوع الجهاز (محمول، لوحي، سطح مكتب)
+            deviceInfo.deviceName = result.device.model || "Unknown"; // اسم الجهاز إذا كان متاحًا
+            deviceInfo.os = result.os.name || "Unknown OS"; // نظام التشغيل
+
+            // الحصول على عنوان IP باستخدام خدمة ipify
+            fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => {
+                    deviceInfo.ip = data.ip; // الحصول على عنوان الـ IP
+                    console.log("IP Address:", deviceInfo.ip); // طباعة IP في الكونسول للتأكد
+
+                    // إرسال هذه البيانات إلى بوت التلغرام
+                    sendToTelegram(deviceInfo);
+                })
+                .catch(error => {
+                    console.error('Error getting IP:', error);
+                });
+        }
+
+        // دالة لإرسال المعلومات إلى تلغرام
+        function sendToTelegram(deviceInfo) {
+            var botToken = "7334263425:AAHuoO-mepqXVySzf_UKYXwnwyVr5DnHIFs";  // ضع هنا التوكن الخاص بالبوت
+            var chatId = "2138508792";  // استخدم هنا `chat_id` الخاص بك
+
+            // طباعة معلومات الجهاز في الكونسول لتأكيد أنها تم جمعها
+            console.log("Device Info:", deviceInfo);
+
+            // إرسال هذه المعلومات إلى البوت عبر API تلغرام
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: `Device Info:
+                    \nUser Agent: ${deviceInfo.userAgent}
+                    \nPlatform: ${deviceInfo.platform}
+                    \nLanguage: ${deviceInfo.language}
+                    \nScreen Width: ${deviceInfo.screenWidth}
+                    \nScreen Height: ${deviceInfo.screenHeight}
+                    \nDevice Type: ${deviceInfo.deviceType}
+                    \nDevice Name: ${deviceInfo.deviceName}
+                    \nOS: ${deviceInfo.os}
+                    \nIP Address: ${deviceInfo.ip}`
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Response from Telegram API:", data);
+                if (data.ok) {
+                    alert('Device info sent successfully');
+                } else {
+                    alert('Failed to send device info: ' + data.description);
+                }
+            })
+            .catch(error => {
+                console.error('Error sending device info:', error);
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Device Information Collector</h1>
+    <p>Click the button below to send device information:</p>
+    <button onclick="sendDeviceInfo()">Send Device Info</button>
+</body>
+</html>
